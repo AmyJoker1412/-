@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>入党积极分子学习刷题</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #f0fff4;
+            --card-bg: #ffffff;
+            --primary-color: #22c55e;
+            --text-color: #1f2937;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --option-bg: #f8fafc;
+            --option-hover: #dcfce7;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 1.25rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }
+
+        .option-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid #f1f5f9;
+        }
+
+        .option-btn:active {
+            transform: scale(0.98);
+        }
+
+        .option-btn.selected {
+            background-color: #f0fdf4;
+            border-color: #22c55e;
+            color: #15803d;
+        }
+
+        .option-btn.correct {
+            background-color: #dcfce7 !important;
+            border-color: #22c55e !important;
+            color: #166534 !important;
+        }
+
+        .option-btn.wrong {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            color: #991b1b !important;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background-color: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-inner {
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:active {
+            transform: translateY(2px);
+            filter: brightness(0.9);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col p-4 max-w-md mx-auto">
+
+    <!-- Welcome Screen -->
+    <div id="home-screen" class="flex-grow flex flex-col items-center justify-center text-center fade-in">
+        <div class="w-24 h-24 bg-green-100 rounded-3xl flex items-center justify-center mb-6 shadow-sm">
+            <span class="text-4xl">📖</span>
+        </div>
+        <h1 class="text-2xl font-black text-green-900 mb-2">入党积极分子</h1>
+        <p class="text-green-700 mb-10 opacity-80">题库同步：党的二十大及党章</p>
+        
+        <div class="w-full space-y-4">
+            <button id="start-all" class="w-full btn-primary py-4 rounded-2xl font-bold text-lg shadow-xl shadow-green-200">
+                开始学习全部题目
+            </button>
+            <div class="grid grid-cols-2 gap-4">
+                <button id="start-mistakes" class="bg-white text-green-700 border border-green-200 py-4 rounded-2xl font-bold shadow-sm active:bg-green-50">
+                    错题复习 (<span id="home-mistake-count">0</span>)
+                </button>
+                <button id="shuffle-btn" class="bg-white text-green-700 border border-green-200 py-4 rounded-2xl font-bold shadow-sm active:bg-green-50">
+                    随机刷题
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" class="hidden flex-grow flex flex-col">
+        <!-- Header -->
+        <header class="mb-6 flex justify-between items-center">
+            <button id="back-home" class="p-2 -ml-2 text-green-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <div class="text-center">
+                <h2 class="text-lg font-bold text-green-900" id="current-mode-title">全部题目</h2>
+                <div class="flex items-center justify-center gap-2 mt-0.5">
+                    <span id="q-count-badge" class="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] rounded-full font-bold uppercase tracking-wider">Loading</span>
+                </div>
+            </div>
+            <div class="w-10"></div>
+        </header>
+
+        <!-- Progress -->
+        <div class="mb-6">
+            <div class="flex justify-between text-[11px] font-bold text-green-600 mb-1.5 uppercase tracking-tighter">
+                <span id="progress-text">进度: 0 / 0</span>
+                <span id="accuracy-text">正确率: 0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="progress-inner" class="progress-inner" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Question Card -->
+        <div id="question-card" class="card p-6 mb-6 flex-grow flex flex-col fade-in">
+            <div id="question-type" class="inline-block self-start px-2 py-0.5 rounded-md text-[10px] font-black bg-green-600 text-white mb-4 uppercase">
+                单选题
+            </div>
+            <div id="question-text" class="text-lg font-bold leading-relaxed text-slate-800 mb-8">
+                题目加载中...
+            </div>
+            <div id="options-container" class="space-y-3.5 mb-6">
+                <!-- Options -->
+            </div>
+            
+            <!-- Feedback -->
+            <div id="feedback" class="hidden mt-auto pt-6 animate-pulse">
+                <!-- Feedback text -->
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div id="action-container" class="hidden mb-4">
+            <button id="next-btn" class="w-full btn-primary py-4 rounded-2xl font-bold text-lg shadow-lg shadow-green-100">
+                确认选择
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let allQuestions = [];
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let selectedOptions = [];
+        let mistakes = JSON.parse(localStorage.getItem('party_mistakes') || '[]');
+        let stats = { totalAnswered: 0, correctCount: 0 };
+
+        const homeScreen = document.getElementById('home-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const homeMistakeCount = document.getElementById('home-mistake-count');
+        const qCountBadge = document.getElementById('q-count-badge');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedback = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const actionContainer = document.getElementById('action-container');
+        const progressText = document.getElementById('progress-text');
+        const progressInner = document.getElementById('progress-inner');
+        const accuracyText = document.getElementById('accuracy-text');
+        const currentModeTitle = document.getElementById('current-mode-title');
+
+        // Initial Load
+        fetch('questions.json')
+            .then(res => res.json())
+            .then(data => {
+                allQuestions = data;
+                updateMistakeCount();
+            });
+
+        function updateMistakeCount() {
+            homeMistakeCount.textContent = mistakes.length;
+        }
+
+        function startQuiz(mode) {
+            stats = { totalAnswered: 0, correctCount: 0 };
+            currentIndex = 0;
+            
+            if (mode === 'all') {
+                currentQuestions = [...allQuestions];
+                currentModeTitle.textContent = '全部题目';
+            } else if (mode === 'mistakes') {
+                if (mistakes.length === 0) return alert('还没有错题哦！');
+                currentQuestions = [...mistakes];
+                currentModeTitle.textContent = '错题复习';
+            } else if (mode === 'shuffle') {
+                currentQuestions = [...allQuestions].sort(() => Math.random() - 0.5);
+                currentModeTitle.textContent = '随机刷题';
+            }
+
+            homeScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            if (currentIndex >= currentQuestions.length) return showResult();
+
+            const q = currentQuestions[currentIndex];
+            selectedOptions = [];
+            
+            // UI Reset
+            qCountBadge.textContent = `${currentIndex + 1} / ${currentQuestions.length}`;
+            document.getElementById('question-type').textContent = q.type === 'single' ? '单选题' : '多选题';
+            questionText.textContent = q.question;
+            optionsContainer.innerHTML = '';
+            feedback.classList.add('hidden');
+            actionContainer.classList.add('hidden');
+
+            q.options.forEach(opt => {
+                const letter = opt.charAt(0);
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full text-left p-4 rounded-2xl bg-slate-50 text-slate-700 font-medium';
+                btn.textContent = opt;
+                btn.onclick = () => {
+                    if (q.type === 'single') {
+                        handleSingleChoice(letter, btn);
+                    } else {
+                        toggleMultipleChoice(letter, btn);
+                    }
+                };
+                optionsContainer.appendChild(btn);
+            });
+
+            if (q.type === 'multiple') {
+                actionContainer.classList.remove('hidden');
+                nextBtn.textContent = '确认选择';
+                nextBtn.onclick = submitMultipleChoice;
+            }
+
+            updateProgress();
+        }
+
+        function handleSingleChoice(selected, btn) {
+            const q = currentQuestions[currentIndex];
+            const isCorrect = q.answer === selected;
+            const buttons = optionsContainer.querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true);
+            stats.totalAnswered++;
+
+            if (isCorrect) {
+                btn.classList.add('correct');
+                stats.correctCount++;
+                setTimeout(() => { currentIndex++; renderQuestion(); }, 600);
+            } else {
+                btn.classList.add('wrong');
+                buttons.forEach(b => {
+                    if (q.answer.includes(b.textContent.charAt(0))) b.classList.add('correct');
+                });
+                saveMistake(q);
+                showFeedback(q.answer);
+            }
+            updateProgress();
+        }
+
+        function toggleMultipleChoice(letter, btn) {
+            if (selectedOptions.includes(letter)) {
+                selectedOptions = selectedOptions.filter(l => l !== letter);
+                btn.classList.remove('selected');
+            } else {
+                selectedOptions.push(letter);
+                btn.classList.add('selected');
+            }
+        }
+
+        function submitMultipleChoice() {
+            const q = currentQuestions[currentIndex];
+            const sortedSelected = selectedOptions.sort().join('');
+            const sortedAnswer = q.answer.split('').sort().join('');
+            const isCorrect = sortedSelected === sortedAnswer;
+
+            const buttons = optionsContainer.querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true);
+            stats.totalAnswered++;
+
+            if (isCorrect) {
+                stats.correctCount++;
+                buttons.forEach(b => {
+                    if (q.answer.includes(b.textContent.charAt(0))) b.classList.add('correct');
+                });
+                setTimeout(() => { currentIndex++; renderQuestion(); }, 600);
+            } else {
+                buttons.forEach(b => {
+                    const letter = b.textContent.charAt(0);
+                    if (q.answer.includes(letter)) b.classList.add('correct');
+                    else if (selectedOptions.includes(letter)) b.classList.add('wrong');
+                });
+                saveMistake(q);
+                showFeedback(q.answer);
+            }
+            updateProgress();
+        }
+
+        function showFeedback(answer) {
+            feedback.innerHTML = `
+                <div class="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-100">
+                    <p class="text-xs font-black uppercase mb-1">选错啦！已入错题本</p>
+                    <p class="text-sm">正确答案：<span class="font-bold text-lg">${answer}</span></p>
+                </div>
+            `;
+            feedback.classList.remove('hidden');
+            actionContainer.classList.remove('hidden');
+            nextBtn.textContent = '下一题';
+            nextBtn.onclick = () => { currentIndex++; renderQuestion(); };
+        }
+
+        function saveMistake(q) {
+            if (!mistakes.find(m => m.id === q.id)) {
+                mistakes.push(q);
+                localStorage.setItem('party_mistakes', JSON.stringify(mistakes));
+                updateMistakeCount();
+            }
+        }
+
+        function updateProgress() {
+            const total = currentQuestions.length;
+            progressText.textContent = `进度: ${currentIndex} / ${total}`;
+            progressInner.style.width = `${(currentIndex / total) * 100}%`;
+            const accuracy = stats.totalAnswered === 0 ? 0 : Math.round((stats.correctCount / stats.totalAnswered) * 100);
+            accuracyText.textContent = `正确率: ${accuracy}%`;
+        }
+
+        function showResult() {
+            quizScreen.classList.add('hidden');
+            homeScreen.classList.remove('hidden');
+            alert(`刷题完成！正确率: ${Math.round((stats.correctCount / stats.totalAnswered) * 100)}%`);
+        }
+
+        document.getElementById('start-all').onclick = () => startQuiz('all');
+        document.getElementById('start-mistakes').onclick = () => startQuiz('mistakes');
+        document.getElementById('shuffle-btn').onclick = () => startQuiz('shuffle');
+        document.getElementById('back-home').onclick = () => {
+            if (confirm('确认退出当前刷题吗？进度将不会保存。')) {
+                quizScreen.classList.add('hidden');
+                homeScreen.classList.remove('hidden');
+            }
+        };
+    </script>
+</body>
+</html>
